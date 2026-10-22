@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "chroma_key", "atlas", "preview", "contact_sheet", "directions", "chroma_report", "frame_review", "direction_semantics", "continuity_report"],
+  "properties": {
+    "status": {"type":"string", "enum":["ready","blocked"]},
+    "summary": {"type":"string"},
+    "chroma_key": {"type":"string"},
+    "atlas": {"type":"string"},
+    "preview": {"type":"string"},
+    "contact_sheet": {"type":"string"},
+    "directions": {"type":"string"},
+    "chroma_report": {"type":"string"},
+    "frame_review": {"type":"string"},
+    "direction_semantics": {"type":"string"},
+    "continuity_report": {"type":"string"}
+  }
+}

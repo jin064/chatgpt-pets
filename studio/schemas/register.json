@@ -1,0 +1,9 @@
+{
+  "type":"object", "additionalProperties":false,
+  "required":["status","summary","pet_id","verified"],
+  "properties": {
+    "status":{"type":"string","enum":["registered","blocked"]},
+    "summary":{"type":"string"}, "pet_id":{"type":"string"},
+    "verified":{"type":"boolean"}
+  }
+}

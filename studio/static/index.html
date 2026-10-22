@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pet Studio · 나만의 작은 동료</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="header"><a class="brand" href="/" aria-label="Pet Studio 홈"><span class="brand-mark">✳</span> pet studio<span class="local">LOCAL</span></a><a class="github" href="https://github.com/jin064/chatgpt-pets" target="_blank" rel="noreferrer">GitHub ↗</a></header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">A LITTLE FRIEND, MADE BY YOU</p><h1>이름과 목소리로<br>시작하는 작은 친구.</h1><p class="intro-copy">좋아하는 캐릭터에 움직임을 더해요.<br>일하는 동안 곁에 있을, 나만의 펫을 만들어 보세요.</p></div><div class="intro-note"><span class="note-icon">✦</span><p>아홉 가지 동작,<br>열여섯 방향의 눈맞춤.</p><span>ChatGPT Pets용 애니메이션</span></div></section>
+
+    <div class="workspace">
+      <section class="card form-card" aria-labelledby="form-title">
+        <div class="card-heading"><div><p class="eyebrow">01 / CREATE</p><h2 id="form-title">어떤 친구를 만들까요?</h2></div><span class="small-pill">NEW PET</span></div>
+        <form id="pet-form">
+          <label for="name">펫 이름 <span class="required">*</span></label>
+          <input id="name" name="name" placeholder="예: 먼작귀 우사기" maxlength="60" required autocomplete="off">
+          <label for="description">친구에 대해 알려주세요 <span class="optional">선택</span></label>
+          <textarea id="description" rows="2" maxlength="1500" placeholder="생김새, 성격, 꼭 살리고 싶은 특징을 적어주세요."></textarea>
+          <div class="uploads">
+            <div><label for="image">참고 이미지 <span class="optional">선택</span></label><label class="upload" id="image-box" for="image"><span class="upload-icon">▧</span><strong id="image-label">이미지 선택</strong><span>PNG · JPG · WebP / 8MB</span><input id="image" type="file" accept="image/png,image/jpeg,image/webp"></label><button id="clear-image" type="button" class="text-button" hidden>이미지 지우기</button></div>
+            <div><label for="audio">알림 목소리 <span class="optional">선택</span></label><label class="upload sound-upload" id="audio-box" for="audio"><span class="upload-icon">♫</span><strong id="audio-label">음성 선택</strong><span>MP3 · WAV 등 / 10MB</span><input id="audio" type="file" accept="audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac,.m4a,.mp3,.wav,.ogg,.flac"></label><button id="clear-audio" type="button" class="text-button" hidden>음성 지우기</button></div>
+          </div>
+          <div class="style-row"><label for="style">그림 스타일</label><select id="style"><option value="auto">캐릭터에 맞게</option value="sticker">말랑한 스티커</option><option value="pixel">픽셀 아트</option><option value="plush">포근한 인형</option><option value="clay">클레이</option><option value="flat-vector">플랫 일러스트</option><option value="3d-toy">3D 토이</option><option value="painterly">손그림</option></select></div>
+          <div class="connection"><span id="connection-dot" class="dot"></span><div><strong id="connection-title">제작 환경 확인 중</strong><p id="connection-detail">Codex와 Pets 연결을 확인해요.</p></div><button type="button" id="check" class="text-button">다시 확인</button></div>
+          <button class="primary create-button" id="create" type="submit" disabled>나만의 펫 만들기 <span>↗</span></button>
+          <p class="fine-print">제작에는 여러 차례의 이미지 생성과 검증이 필요해요. Codex 사용 한도가 적용되며, 완성 후 동작을 확인하고 등록할 수 있어요.</p>
+        </form>
+      </section>
+
+      <section class="card preview-card" aria-labelledby="preview-title">
+        <div class="card-heading"><div><p class="eyebrow">02 / MEET YOUR PET</p><h2 id="preview-title">먼작귀 우사기</h2></div><span class="small-pill purple" id="preview-badge">완성 예시</span></div>
+        <div class="pet-stage" id="pet-stage"><div class="stage-orbit"></div><img id="pet-preview" src="/pets/usagi/previews/idle.gif" alt="우사기 대기 동작 미리보기"><span class="stage-caption" id="stage-caption">함께할 준비가 됐어요.</span></div>
+        <div class="preview-controls" id="preview-controls" aria-label="동작 선택"><button type="button" data-state="idle" aria-pressed="true">대기</button><button type="button" data-state="waving" aria-pressed="false">인사</button><button type="button" data-state="jumping" aria-pressed="false">점프</button><button type="button" data-state="running-right" aria-pressed="false">달리기</button><button type="button" data-state="running" aria-pressed="false">작업</button><button type="button" data-state="look-loop" aria-pressed="false">둘러보기</button></div>
+        <div class="voice"><div class="voice-title"><span>♫</span><div><strong id="voice-title">우사기의 “우나!”</strong><p>알림에 쓸 목소리를 들어보세요.</p></div></div><audio id="voice-preview" controls preload="none" src="/pets/usagi/audio/chiikawa-usagi-una.mp3"></audio><p id="voice-empty" hidden>선택한 음성이 없어요.</p></div>
+        <p class="preview-help" id="preview-help">완성 예시예요. 새 친구를 만들면 여기에 나타나요.</p>
+        <div id="result-actions" class="result-actions" hidden><button type="button" id="register" class="primary">이 펫을 Pets에 등록</button><a id="download" class="secondary" href="#">파일 ZIP 받기 ↓</a><button type="button" id="apply-sound" class="secondary">이 목소리를 내 알림음으로 설정</button><p class="fine-print">알림음은 이 Mac의 Codex 전체에 적용돼요. 기존 알림 전달은 유지하며, 아래에서 되돌릴 수 있어요.</p></div>
+      </section>
+    </div>
+
+    <section class="card progress-card" id="progress-panel" hidden aria-labelledby="progress-title"><div class="progress-heading"><div><p class="eyebrow">YOUR LITTLE FRIEND IS ON THE WAY</p><h2 id="progress-title">제작 중</h2></div><button type="button" id="cancel" class="secondary">제작 중지</button></div><ol class="steps"><li data-step="1">준비</li><li data-step="2">기본 모습</li><li data-step="3">동작 제작</li><li data-step="4">검증·미리보기</li></ol><p id="job-message" role="status" aria-live="polite"></p><details><summary>제작 메시지 보기</summary><pre id="job-events"></pre></details></section>
+
+    <section class="collection" aria-labelledby="collection-title"><div class="section-heading"><div><p class="eyebrow">ALREADY HATCHED</p><h2 id="collection-title">먼저 만난 친구들</h2></div><span>작은 시작, 다양한 가능성</span></div><div class="example-grid"><button type="button" class="example usagi" data-example="usagi"><img src="/pets/usagi/previews/waving.gif" alt="인사하는 우사기"><span><strong>먼작귀 우사기</strong><small>엉뚱하고 씩씩한 노란 친구</small><em>동작과 목소리 보기 ↗</em></span></button><button type="button" class="example cinnamon" data-example="cinnamoroll"><img src="/pets/cinnamoroll/previews/idle.gif" alt="시나모롤"><span><strong>시나모롤</strong><small>긴 귀와 돌돌 말린 꼬리</small><em>동작 보기 ↗</em></span></button></div></section>
+    <section class="history" id="history-section" hidden><div class="section-heading"><h2>내 제작 기록</h2><button class="text-button" id="refresh-jobs" type="button">새로고침 ↻</button></div><div id="history-list"></div></section>
+    <footer><span>pet studio <span class="footer-star">✳</span> 작은 동료를 만드는 공간</span><button id="restore-sound" class="text-button" type="button" hidden>이전 알림 설정으로 복원</button><span>파일과 제작 기록은 이 컴퓨터에 저장돼요.</span></footer>
+  </main>
+  <div id="toast" class="toast" role="alert" hidden></div>
+</body></html>

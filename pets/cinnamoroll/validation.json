@@ -1,0 +1,81 @@
+{
+  "structuralValidation": {
+    "ok": true,
+    "encoded_bytes": 1401559,
+    "sha256": "ce106fb6a549a858142e6c17541186156012ac81b29db2b5444e950dddebafef",
+    "format": "PNG",
+    "width": 1536,
+    "height": 2288,
+    "errors": [],
+    "warnings": []
+  },
+  "qualityValidation": {
+    "ok": true,
+    "jump": {
+      "idle_baseline": 188,
+      "jump_baselines": [
+        189,
+        167,
+        140,
+        170,
+        189
+      ],
+      "airborne_lift_pixels": 49,
+      "landing_delta_pixels": 1
+    },
+    "look_registration": {
+      "neutral_center_x": 96.0,
+      "look_centers_x": [
+        94.0,
+        89.5,
+        86.0,
+        85.5,
+        87.5,
+        87.5,
+        89.0,
+        94.0,
+        95.0,
+        100.5,
+        101.0,
+        102.0,
+        103.0,
+        104.0,
+        103.5,
+        101.0
+      ],
+      "look_widths": [
+        146,
+        131,
+        130,
+        129,
+        129,
+        127,
+        126,
+        136,
+        142,
+        131,
+        130,
+        132,
+        134,
+        128,
+        131,
+        132
+      ],
+      "maximum_center_drift_pixels": 10.5,
+      "maximum_width_ratio": 1.1587301587301588
+    },
+    "errors": [],
+    "warnings": [
+      "look direction 247.5 accepted with a reviewed warning",
+      "067.5 has transparent interior hole rows (y=142)",
+      "180->202.5 diff is a local outlier (1348 pixels vs neighbor average 895)",
+      "225->247.5 diff is a local outlier (703 pixels vs neighbor average 464)",
+      "337.5->000 diff is a local outlier (2491 pixels vs neighbor average 1045)"
+    ]
+  },
+  "blindDirectionValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  }
+}

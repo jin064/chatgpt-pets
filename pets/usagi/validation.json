@@ -1,0 +1,83 @@
+{
+  "structuralValidation": {
+    "ok": true,
+    "encoded_bytes": 1505105,
+    "sha256": "141da6af9b43456f5f11e3e526fb40e01fc581c0e7ee265aed29cb21b69691a6",
+    "format": "PNG",
+    "width": 1536,
+    "height": 2288,
+    "errors": [],
+    "warnings": []
+  },
+  "qualityValidation": {
+    "ok": true,
+    "jump": {
+      "idle_baseline": 199,
+      "jump_baselines": [
+        199,
+        177,
+        143,
+        174,
+        199
+      ],
+      "airborne_lift_pixels": 56,
+      "landing_delta_pixels": 0
+    },
+    "look_registration": {
+      "neutral_center_x": 96.0,
+      "look_centers_x": [
+        98.0,
+        97.5,
+        99.0,
+        102.0,
+        103.5,
+        103.5,
+        104.5,
+        104.5,
+        97.5,
+        96.0,
+        94.5,
+        90.5,
+        90.5,
+        91.0,
+        93.0,
+        94.0
+      ],
+      "look_widths": [
+        96,
+        91,
+        90,
+        88,
+        87,
+        87,
+        87,
+        87,
+        87,
+        86,
+        85,
+        85,
+        85,
+        86,
+        86,
+        86
+      ],
+      "maximum_center_drift_pixels": 8.5,
+      "maximum_width_ratio": 1.1294117647058823
+    },
+    "errors": [],
+    "warnings": [
+      "look direction 022.5 accepted with a reviewed warning",
+      "look direction 202.5 accepted with a reviewed warning",
+      "157.5->180 diff is a local outlier (1605 pixels vs neighbor average 990)",
+      "270->292.5 diff is a local outlier (1783 pixels vs neighbor average 1003)",
+      "337.5->000 diff is a local outlier (2360 pixels vs neighbor average 934)"
+    ]
+  },
+  "blindDirectionValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "horizontal-7 A horizontal axis is ambiguous"
+    ]
+  }
+}

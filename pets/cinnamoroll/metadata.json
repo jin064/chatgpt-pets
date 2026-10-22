@@ -1,0 +1,59 @@
+{
+  "name": "시나모롤",
+  "character": "Cinnamoroll (Sanrio)",
+  "spriteVersion": 2,
+  "file": "spritesheet.png",
+  "width": 1536,
+  "height": 2288,
+  "cellWidth": 192,
+  "cellHeight": 208,
+  "columns": 8,
+  "rows": [
+    {
+      "state": "idle",
+      "frames": 6
+    },
+    {
+      "state": "running-right",
+      "frames": 8
+    },
+    {
+      "state": "running-left",
+      "frames": 8
+    },
+    {
+      "state": "waving",
+      "frames": 4
+    },
+    {
+      "state": "jumping",
+      "frames": 5
+    },
+    {
+      "state": "failed",
+      "frames": 8
+    },
+    {
+      "state": "waiting",
+      "frames": 6
+    },
+    {
+      "state": "running",
+      "frames": 6
+    },
+    {
+      "state": "review",
+      "frames": 6
+    },
+    {
+      "state": "look-row-9",
+      "frames": 8
+    },
+    {
+      "state": "look-row-10",
+      "frames": 8
+    }
+  ],
+  "frameCount": 73,
+  "sha256": "ce106fb6a549a858142e6c17541186156012ac81b29db2b5444e950dddebafef"
+}

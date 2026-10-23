@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pet Studio · Grok 알림 설정</title><link rel="stylesheet" href="options.css"><script src="options.js" defer></script></head>
+<body><main>
+<a class="brand" href="https://github.com/jin064/chatgpt-pets" target="_blank" rel="noreferrer">✳ pet studio</a>
+<p class="eyebrow">GROK WEB / EXPERIMENTAL</p><h1>답변이 끝나면,<br>익숙한 목소리로.</h1>
+<p class="intro">Grok 웹 채팅의 완료를 감지해 알림음을 재생해요.<br>이 Chrome이 실행 중이고 Grok 탭이 열려 있어야 해요.</p>
+<section><div class="heading"><h2>01 · 연결</h2><span id="connection">연결 확인 중</span></div>
+<p>연결할 때 <strong>grok.com 한 사이트</strong>의 접근 권한을 요청해요. 응답 중지·전송 버튼의 상태를 확인하며, 대화 내용은 수집하거나 전송하지 않아요.</p>
+<div class="row"><button id="connect">Grok 웹 연결</button><button class="quiet" id="disconnect" hidden>연결 해제</button></div>
+<label class="toggle"><input id="enabled" type="checkbox" disabled> 응답 완료 알림 켜기</label>
+<p class="small">연결 후 이미 열려 있던 Grok 탭은 한 번 새로고침해 주세요.</p></section>
+<section><div class="heading"><h2>02 · 목소리</h2><span>이 브라우저에만 저장</span></div>
+<p id="sound-name">우사기의 “우나!” · 기본 음성</p>
+<label class="file">내 음성 선택<input id="sound-file" type="file" accept="audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac,.mp3,.wav,.m4a,.ogg,.flac"></label>
+<p class="small">MP3 · WAV · M4A · OGG · FLAC / 최대 5MB</p>
+<div class="row"><button id="test">소리 테스트 ♫</button><button class="quiet" id="reset-sound">기본 음성으로</button></div></section>
+<div class="notice"><strong>실제 Grok 응답 완료 검증 대기</strong><p>현재는 실험 버전이에요. Grok 화면·언어가 바뀌거나 오류가 나면 감지가 누락되거나 잘못 울릴 수 있어요. 모바일 앱과 다른 브라우저에는 적용되지 않아요.</p><p id="last-event">아직 감지한 완료가 없어요.</p></div>
+<p id="status" role="status" aria-live="polite"></p><footer>API 키 없이 · 로컬 음성 · Chrome 116 이상</footer>
+</main></body></html>

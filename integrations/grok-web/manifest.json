@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Pet Studio · Grok 완료 알림",
+  "description": "Grok 웹 응답이 끝나면 이 브라우저에 저장한 목소리를 재생합니다. 실험 버전.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "offscreen", "scripting"],
+  "optional_host_permissions": ["https://grok.com/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_title": "Grok 알림 설정"},
+  "options_page": "options.html"
+}

@@ -1,6 +1,7 @@
 """No model calls, no real account mutation. Exercise local trust boundaries."""
 import base64
 import http.client
+import io
 import json
 from pathlib import Path
 import sys
@@ -9,6 +10,7 @@ import threading
 import time
 import tomllib
 import unittest
+import zipfile
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -194,6 +196,18 @@ class StudioTest(unittest.TestCase):
             return status, data
         try:
             self.assertEqual(request('GET', '/')[0], 200)
+            status, package = request('GET', '/downloads/grok-extension.zip')
+            self.assertEqual(status, 200)
+            with zipfile.ZipFile(io.BytesIO(package)) as archive:
+                names = archive.namelist()
+                self.assertTrue(all(name.startswith('pet-studio-grok/') and name.count('/') == 1 for name in names))
+                manifest = json.loads(archive.read('pet-studio-grok/manifest.json'))
+                self.assertEqual(manifest['optional_host_permissions'], ['https://grok.com/*'])
+                self.assertNotIn('host_permissions', manifest)
+                self.assertEqual(archive.read('pet-studio-grok/una.mp3'), (Path(__file__).resolve().parents[2] / 'pets/usagi/audio/chiikawa-usagi-una.mp3').read_bytes())
+                self.assertNotIn('pet-studio-grok/tests', names)
+            self.assertEqual(request('GET', '/integrations/grok-web/options.html')[0], 200)
+            self.assertEqual(request('GET', '/integrations/grok-web/background.js')[0], 404)
             self.assertEqual(request('GET', '/', headers={'Host': 'evil.example'})[0], 403)
             self.assertEqual(request('POST', '/api/jobs', '{}', {'Content-Type': 'application/json'})[0], 403)
             headers = {'Content-Type': 'application/json', 'X-Pet-Studio-Token': server.token,

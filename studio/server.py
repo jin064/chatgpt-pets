@@ -2,6 +2,7 @@
 """Loopback-only Pet Studio. Python 3.11+, Pillow for final QA."""
 from __future__ import annotations
 import argparse
+import io
 import json
 import mimetypes
 import os
@@ -13,8 +14,10 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 import webbrowser
+import zipfile
 
 from notifications import Notifications
+from claude_notifications import ClaudeNotifications
 from runner import HERE, ROOT, JobManager, preflight, safe_file
 
 MAX_BODY = 26 * 1024 * 1024
@@ -28,6 +31,7 @@ class Server(ThreadingHTTPServer):
         self.manager = manager
         self.token = secrets.token_urlsafe(32)
         self.notifications = Notifications()
+        self.notification_targets = {'codex': self.notifications, 'claude': ClaudeNotifications()}
         self.notification_lock = threading.Lock()
         self.checks = None
         self.check_time = 0
@@ -51,7 +55,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Referrer-Policy', 'no-referrer')
         self.send_header('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
         if attachment:
-            self.send_header('Content-Disposition', 'attachment; filename="pet.zip"')
+            filename = attachment if isinstance(attachment, str) else 'pet.zip'
+            self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
         self.end_headers()
         try:
             self.wfile.write(data)
@@ -74,9 +79,23 @@ class Handler(BaseHTTPRequestHandler):
                 if time.time() - self.server.check_time > 30:
                     self.server.checks = preflight()
                     self.server.check_time = time.time()
-                return self.send({**self.server.checks, 'notifications': self.server.notifications.status()})
+                return self.send({**self.server.checks, 'notifications': self.server.notifications.status(),
+                                  'notification_targets': {key: target.status() for key, target in self.server.notification_targets.items()}})
             if path == '/api/jobs':
                 return self.send({'jobs': self.server.manager.list()})
+            if path == '/downloads/grok-extension.zip':
+                buffer = io.BytesIO()
+                folder = ROOT / 'integrations' / 'grok-web'
+                with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+                    for file in sorted(folder.iterdir()):
+                        if file.is_file() and file.suffix in {'.json', '.js', '.html', '.css', '.mp3', '.md'}:
+                            archive.write(file, 'pet-studio-grok/' + file.name)
+                return self.send(buffer.getvalue(), 'application/zip', attachment='pet-studio-grok.zip')
+            if path.startswith('/integrations/grok-web/'):
+                name = path.removeprefix('/integrations/grok-web/')
+                if name not in {'options.html', 'options.js', 'options.css'}:
+                    raise ValueError('설정 미리보기 파일이 아닙니다.')
+                return self.file(safe_file(ROOT / 'integrations' / 'grok-web', name))
             if path.startswith('/api/jobs/'):
                 return self.send(self.server.manager.get(path.removeprefix('/api/jobs/')))
             if path.startswith('/files/'):
@@ -126,8 +145,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send({'error': ' · '.join(checks['issues'])}, status=409)
                 return self.send(manager.create(payload), status=201)
             if path == '/api/notifications/restore':
+                provider = payload.get('provider', 'codex')
+                if provider not in self.server.notification_targets:
+                    raise ValueError('지원하지 않는 알림 연결입니다.')
                 with self.server.notification_lock:
-                    return self.send(self.server.notifications.restore())
+                    return self.send(self.server.notification_targets[provider].restore())
             parts = path.strip('/').split('/')
             if len(parts) != 4 or parts[:2] != ['api', 'jobs']:
                 return self.send({'error': '찾을 수 없습니다.'}, status=404)
@@ -141,8 +163,11 @@ class Handler(BaseHTTPRequestHandler):
             elif parts[3] == 'sound':
                 if not job['audio']:
                     raise ValueError('이 펫에 음성 파일이 없습니다.')
+                provider = payload.get('provider', 'codex')
+                if provider not in self.server.notification_targets:
+                    raise ValueError('지원하지 않는 알림 연결입니다.')
                 with self.server.notification_lock:
-                    self.server.notifications.apply(safe_file(manager.data / job['id'], job['audio']))
+                    self.server.notification_targets[provider].apply(safe_file(manager.data / job['id'], job['audio']))
             else:
                 return self.send({'error': '찾을 수 없습니다.'}, status=404)
             self.send(manager.get(job['id']))

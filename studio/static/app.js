@@ -4,6 +4,14 @@ const stateLabels = {idle:'대기', waving:'인사', jumping:'점프', 'running-
 const statuses = {building:'제작 중', checking:'검증 중', ready:'미리보기 준비', registering:'등록 중', registered:'등록 완료', blocked:'확인 필요', cancelled:'중지됨', interrupted:'중단됨'};
 let token, ready = false, job = null, activeExample = 'usagi', jobs = [], polling = false;
 let imageUrl = null, audioUrl = null, toastTimer;
+let notificationTargets = {};
+function renderNotificationTarget() {
+  const provider = $('notify-target').value, target = notificationTargets[provider] || {};
+  $('restore-sound').hidden = !target.active;
+  $('apply-sound').disabled = target.supported === false || target.hooks_disabled === true;
+  $('restore-sound').textContent = provider === 'claude' ? 'Claude Code의 Pet Studio 알림 연결 해제' : '이전 Codex 알림 설정으로 복원';
+  $('notification-help').textContent = provider === 'claude' ? '이 Mac의 Claude Code 완료 훅에 연결해요. 기존 훅은 보존하며, 일반 claude.ai 웹 채팅에는 적용되지 않아요.' : '이 Mac의 Codex 전체 완료 알림에 적용돼요. 기존 알림 전달을 보존하며 이전 설정으로 복원할 수 있어요.';
+}
 
 function toast(text) {
   $('toast').textContent = text; $('toast').hidden = false;
@@ -44,8 +52,8 @@ async function check() {
     $('connection-dot').className = 'dot ' + (ready ? 'good' : 'bad');
     $('connection-title').textContent = ready ? '제작 준비 완료 · Codex + Pets' : '제작 환경을 연결해 주세요';
     $('connection-detail').textContent = ready ? info.note : info.issues.join(' · ');
-    $('restore-sound').hidden = !info.notifications.active;
-    $('apply-sound').disabled = !info.notifications.supported;
+    notificationTargets = info.notification_targets || {codex: info.notifications};
+    renderNotificationTarget();
   } catch (error) {
     ready = false; $('connection-title').textContent = '연결을 확인해 주세요';
     $('connection-detail').textContent = error.message; $('connection-dot').className = 'dot bad';
@@ -180,16 +188,17 @@ for (const [id, action] of [['cancel','cancel'],['resume','resume'],['register',
     if (!job) return;
     $(id).disabled = true;
     try {
-      const result = await api('/api/jobs/' + job.id + '/' + action, {});
+      const result = await api('/api/jobs/' + job.id + '/' + action, action === 'sound' ? {provider:$('notify-target').value} : {});
       showJob(result, true); await loadJobs();
-      if (action === 'sound') { toast('내 Codex 알림음으로 설정했어요. 다음 알림부터 적용돼요.'); await check(); }
+      if (action === 'sound') { toast('선택한 도구의 완료 알림에 연결했어요. 다음 새 세션부터 확인해 주세요.'); await check(); }
     } catch (error) { toast(error.message); } finally { $(id).disabled = false; }
   });
 }
 $('restore-sound').addEventListener('click', async () => {
-  try { await api('/api/notifications/restore', {}); await check(); toast('이전 알림 설정으로 복원했어요.'); }
+  try { await api('/api/notifications/restore', {provider:$('notify-target').value}); await check(); toast('선택한 도구의 알림 연결을 해제했어요.'); }
   catch (error) { toast(error.message); }
 });
+$('notify-target').addEventListener('change', renderNotificationTarget);
 async function init() {
   try {
     ({token} = await api('/api/session'));

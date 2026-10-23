@@ -42,6 +42,28 @@ def safe_file(root, relative):
     return path
 
 
+def collect_previews(folder, preview_dir):
+    previews = {}
+    for state in STATES:
+        filename = state + '.gif'
+        candidates = [preview_dir / 'states' / filename, preview_dir / filename]
+        path = next((path for path in candidates if path.is_file()), None)
+        if path is None:
+            raise ValueError('필수 동작 미리보기가 없습니다: ' + state)
+        safe_file(folder, str(path.relative_to(folder)))
+        previews[filename] = str(path.relative_to(folder))
+    for filename in ['all-states.mp4', 'idle-jump-idle.gif', 'look-loop.gif']:
+        path = safe_file(folder, str((preview_dir / filename).relative_to(folder)))
+        previews[filename] = str(path.relative_to(folder))
+    # The bundled renderer writes four separate labeled stills; older packs use a board.
+    stills = (['four-stills.png'] if (preview_dir / 'four-stills.png').is_file() else
+              ['still-01-idle.png', 'still-02-waving.png', 'still-03-jumping.png', 'still-04-review.png'])
+    for filename in stills:
+        path = safe_file(folder, str((preview_dir / filename).relative_to(folder)))
+        previews[filename] = str(path.relative_to(folder))
+    return previews
+
+
 def codex_binary():
     candidates = [os.environ.get('CODEX_BIN'), shutil.which('codex'),
                   '/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex',
@@ -132,7 +154,12 @@ class JobManager:
             try:
                 job = json.loads(path.read_text())
                 if job['status'] in ACTIVE:
-                    job.update(status='interrupted', message='서버가 종료되어 작업이 중단됐습니다. 결과를 확인한 뒤 새로 시작해 주세요.')
+                    if job['status'] == 'registering' or job.get('operation') == 'register':
+                        job['operation'] = 'register'
+                        message = '등록 중 서버가 종료됐습니다. 중복 생성을 피하려면 먼저 Pets 목록에서 등록 여부를 확인해 주세요.'
+                    else:
+                        message = '서버가 종료되어 제작이 중단됐습니다. 이어서 만들기로 남은 작업을 진행할 수 있습니다.'
+                    job.update(status='interrupted', message=message)
                     write_json(path, job)
                 self.jobs[job['id']] = job
             except (ValueError, KeyError, OSError):
@@ -163,6 +190,11 @@ class JobManager:
                     snapshot['stage'] = 3
                 elif (run / 'pet_request.json').is_file():
                     snapshot['stage'] = 2
+            folder = self.data / job_id
+            snapshot['can_resume'] = (snapshot['status'] in {'blocked', 'interrupted', 'cancelled'} and
+                                      snapshot.get('operation', 'build') == 'build' and
+                                      not (folder / 'registration-attempt.json').exists() and
+                                      not (folder / 'created-pet.json').exists())
             return snapshot
 
     def list(self):
@@ -198,7 +230,7 @@ class JobManager:
             write_json(folder / 'request.json', request)
             job = {'id': job_id, 'name': name.strip(), 'created': time.time(), 'status': 'building',
                    'message': '제작을 시작합니다.', 'events': [], 'audio': request['audio'],
-                   'image': request['image'], 'stage': 1}
+                   'image': request['image'], 'stage': 1, 'operation': 'build'}
             self.jobs[job_id] = job
             self.save(job)
             threading.Thread(target=self.run, args=(job, 'build'), daemon=True).start()
@@ -214,8 +246,18 @@ class JobManager:
             atlas = safe_file(folder, verified['atlas'])
             if hashlib.sha256(atlas.read_bytes()).hexdigest() != verified['sha256']:
                 raise ValueError('검증 이후 파일이 바뀌었습니다. 등록할 수 없습니다.')
-            self.update(job, status='registering', message='Pets 계정에 등록하고 있습니다.')
+            self.update(job, status='registering', operation='register', message='Pets 계정에 등록하고 있습니다.')
             threading.Thread(target=self.run, args=(job, 'register'), daemon=True).start()
+
+    def resume(self, job_id):
+        with self.lock:
+            job = self.jobs[job_id]
+            if self.busy() or not self.get(job_id)['can_resume']:
+                raise ValueError('중단된 제작만 이어서 실행할 수 있습니다. 등록 여부가 불확실한 작업은 먼저 Pets 목록에서 확인해 주세요.')
+            self.cancelled.discard(job_id)
+            self.update(job, status='building', operation='build', last_error='',
+                        message='남아 있는 이미지와 검증 기록에서 제작을 이어갑니다.')
+            threading.Thread(target=self.run, args=(job, 'build'), daemon=True).start()
 
     def cancel(self, job_id):
         with self.lock:
@@ -245,10 +287,19 @@ class JobManager:
                    '--cd', str(folder), '--output-schema', str(HERE / 'schemas' / f'{mode}.json'),
                    '--output-last-message', str(folder / f'{mode}-result.json'), '-']
         prompt = (HERE / 'templates' / f'{mode}.md').read_text()
+        if mode == 'build' and (folder / 'run').exists():
+            prompt += ('\nRESUMING AN INTERRUPTED CREATION: inspect existing run/imagegen-jobs.json, '
+                       'the canonical base, approved state frames and saved QA before any new generation. '
+                       'Preserve approved artifacts and their geometry. Do not rerun preparation over '
+                       'the existing run or regenerate the base or rows that passed. Continue from '
+                       'the first incomplete or failed gate, then perform all final validation normally.\n')
         skill = skill_directory()
         if skill:
             prompt += f'\nInstalled creation skill: {skill / "SKILL.md"}\nPython with Pillow: {sys.executable}\n'
-        with (folder / f'{mode}-stderr.log').open('w') as stderr:
+        output = folder / f'{mode}-result.json'
+        if output.exists():
+            output.rename(folder / f'{mode}-result-before-{time.time_ns()}.json')
+        with (folder / f'{mode}-stderr.log').open('a') as stderr:
             with self.lock:
                 if job['id'] in self.cancelled:
                     return
@@ -266,13 +317,22 @@ class JobManager:
                     except ValueError:
                         continue
                     item = event.get('item') or {}
-                    if item.get('type') == 'agent_message' and event.get('type') == 'item.completed':
+                    if event.get('type') == 'thread.started':
+                        self.update(job, codex_thread_id=event.get('thread_id', ''))
+                    elif item.get('type') == 'agent_message' and event.get('type') == 'item.completed':
                         self.log(job, item.get('text', ''))
                     elif event.get('type') == 'item.started' and item.get('type') in {'mcp_tool_call', 'command_execution'}:
                         # Deliberately exclude tool arguments, shell commands, tokens and raw payloads.
                         self.log(job, '도구 실행: ' + (item.get('tool') or '로컬 제작·검증'))
                     elif event.get('type') in {'error', 'turn.failed'}:
-                        self.log(job, 'Codex 실행 오류가 발생했습니다. 마지막 제작 메시지를 확인해 주세요.')
+                        error = event.get('error') or {}
+                        detail = str(event.get('message') or (error.get('message') if isinstance(error, dict) else error) or 'Codex 실행 오류')
+                        detail = re.sub(r'(?i)bearer\s+\S+|sk-[A-Za-z0-9_-]{16,}', '[redacted]', detail)[:1000]
+                        self.update(job, last_error=detail)
+                        if re.search(r'reconnect|retry|stream disconnect', detail, re.I):
+                            self.log(job, '연결이 잠시 끊겨 재연결하고 있습니다.')
+                        else:
+                            self.log(job, 'Codex: ' + detail)
                 code = process.wait()
             finally:
                 timer.cancel()
@@ -281,7 +341,9 @@ class JobManager:
             if job['id'] in self.cancelled:
                 return
             if code != 0:
-                raise ValueError('Codex 실행이 완료되지 않았습니다. 로그인·도구 연결·사용 한도를 확인해 주세요. 로컬 작업 폴더에 오류 로그를 보관했습니다.')
+                detail = job.get('last_error') or '로그인·도구 연결·사용 한도를 확인해 주세요.'
+                phase = '등록' if mode == 'register' else '제작'
+                raise ValueError(phase + ' 실행이 중단됐습니다. ' + detail + ' 작업 파일과 오류 로그는 보관됩니다.')
 
     def _timeout(self, job, process):
         with self.lock:
@@ -364,10 +426,7 @@ class JobManager:
                 raise ValueError('최종 검증을 통과하지 못했습니다. QA 보고서를 확인하고 해당 제작 행을 수정해야 합니다.')
         # Require the complete motion set rather than a lone static preview.
         preview_dir = files['preview'].parent
-        previews = {}
-        for filename in [*(s + '.gif' for s in STATES), 'all-states.mp4', 'idle-jump-idle.gif', 'look-loop.gif', 'four-stills.png']:
-            path = safe_file(folder, str((preview_dir / filename).relative_to(folder)))
-            previews[filename] = str(path.relative_to(folder))
+        previews = collect_previews(folder, preview_dir)
         # Decode the preview and final image to reject corrupt output.
         from PIL import Image
         with Image.open(files['preview']) as image:

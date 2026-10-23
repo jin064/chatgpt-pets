@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from notifications import Notifications, replace_notify
-from runner import JobManager, decode_upload, safe_file, write_json
+from runner import JobManager, STATES, collect_previews, decode_upload, safe_file, write_json
 from server import MAX_BODY, Server
 
 
@@ -75,6 +75,39 @@ class StudioTest(unittest.TestCase):
         self.assertEqual(self.manager.get(job['id'])['status'], 'blocked')
         self.assertFalse((folder / 'pet.zip').exists())
 
+    def test_resume_preserves_approved_artifacts_and_request(self):
+        job = self.make_job()
+        folder = self.manager.data / job['id']
+        (folder / 'approved.png').write_bytes(b'approved-artifact')
+        before = (folder / 'request.json').read_bytes()
+        self.manager.update(self.manager.jobs[job['id']], status='blocked')
+        self.assertTrue(self.manager.get(job['id'])['can_resume'])
+        with patch.object(self.manager, 'run'):
+            self.manager.resume(job['id'])
+        self.assertEqual(self.manager.get(job['id'])['status'], 'building')
+        self.assertEqual((folder / 'approved.png').read_bytes(), b'approved-artifact')
+        self.assertEqual((folder / 'request.json').read_bytes(), before)
+
+    def test_resume_cannot_repeat_uncertain_registration(self):
+        job = self.make_job()
+        self.manager.update(self.manager.jobs[job['id']], status='blocked', operation='register')
+        with self.assertRaises(ValueError):
+            self.manager.resume(job['id'])
+        self.manager.update(self.manager.jobs[job['id']], operation='build')
+        (self.manager.data / job['id'] / 'registration-attempt.json').write_text('{}')
+        with self.assertRaises(ValueError):
+            self.manager.resume(job['id'])
+
+    def test_server_restart_during_registration_requires_reconciliation(self):
+        job = self.make_job()
+        self.manager.update(self.manager.jobs[job['id']], status='registering', operation='register')
+        restarted = JobManager(self.manager.data)
+        record = restarted.get(job['id'])
+        self.assertEqual(record['status'], 'interrupted')
+        self.assertFalse(record['can_resume'])
+        self.assertIn('등록 여부', record['message'])
+        with self.assertRaises(ValueError):
+            restarted.resume(job['id'])
     def test_registration_requires_verified_result(self):
         job = self.make_job()
         folder = self.manager.data / job['id']
@@ -82,6 +115,21 @@ class StudioTest(unittest.TestCase):
         with patch.object(self.manager, 'execute'):
             self.manager.run(self.manager.jobs[job['id']], 'register')
         self.assertEqual(self.manager.get(job['id'])['status'], 'blocked')
+
+    def test_bundled_renderer_preview_layout_is_supported(self):
+        previews = self.root / 'previews'
+        (previews / 'states').mkdir(parents=True)
+        for state in STATES:
+            (previews / 'states' / (state + '.gif')).write_bytes(b'fixture')
+        for name in ['all-states.mp4', 'idle-jump-idle.gif', 'look-loop.gif', 'still-01-idle.png',
+                     'still-02-waving.png', 'still-03-jumping.png', 'still-04-review.png']:
+            (previews / name).write_bytes(b'fixture')
+        index = collect_previews(self.root, previews)
+        self.assertEqual(index['idle.gif'], 'previews/states/idle.gif')
+        self.assertEqual(len([name for name in index if name.startswith('still-')]), 4)
+        (previews / 'states/jumping.gif').unlink()
+        with self.assertRaises(ValueError):
+            collect_previews(self.root, previews)
 
     def test_registration_rejects_changed_atlas(self):
         job = self.make_job()

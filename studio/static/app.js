@@ -97,20 +97,24 @@ async function loadJobs() {
   }
 }
 function showJob(j, keepPreview = false) {
-  const same = job?.id === j.id; job = j; activeExample = null;
+  const same = job?.id === j.id, hadResult = !!job?.result; job = j; activeExample = null;
   $('preview-title').textContent = j.name;
   $('preview-badge').textContent = statuses[j.status] || j.status;
   $('progress-panel').hidden = false; $('progress-title').textContent = j.name + ' · ' + (statuses[j.status] || j.status);
-  $('job-message').textContent = j.message;
+  const buildingMessages = {1:'참고 이미지와 음성을 확인하고 제작을 준비하고 있어요.', 2:'캐릭터의 기본 모습을 만들고 있어요.', 3:'기본 모습을 만들었어요. 아홉 가지 동작과 열여섯 방향의 시선을 제작·검증하고 있어요.'};
+  $('job-message').textContent = j.status === 'building' ? buildingMessages[j.stage] || j.message : j.message;
   $('job-events').textContent = (j.events || []).map(event => event.text).join('\n\n');
   $('cancel').hidden = !['building','checking'].includes(j.status);
+  $('resume').hidden = !j.can_resume;
   document.querySelectorAll('[data-step]').forEach(el => {
     const step = Number(el.dataset.step);
     el.classList.toggle('done', ['ready','registered','registering'].includes(j.status) || step < j.stage);
     el.classList.toggle('current', !['ready','registered','registering'].includes(j.status) && step === j.stage);
+    if (el.classList.contains('current')) el.setAttribute('aria-current','step');
+    else el.removeAttribute('aria-current');
   });
   if (j.result) {
-    if (!same || !keepPreview) {
+    if (!same || !keepPreview || !hadResult) {
       setImage(fileUrl(j, j.result.preview), j.name + ' 전체 동작 미리보기');
       document.querySelectorAll('[data-state]').forEach(b => b.setAttribute('aria-pressed','false'));
     }
@@ -119,7 +123,7 @@ function showJob(j, keepPreview = false) {
     $('register').hidden = j.status !== 'ready';
     $('download').href = fileUrl(j, 'pet.zip');
     $('apply-sound').hidden = !j.audio;
-    $('preview-help').textContent = j.result.warnings.length ? '검증 메모: ' + j.result.warnings.join(' · ') : '구조와 동작 품질 검증을 통과했어요.';
+    $('preview-help').textContent = j.result.warnings.length ? '중간 시선의 일부 변화는 미세할 수 있어요. 둘러보기 동작을 확인해 주세요.' : '구조와 동작 품질 검증을 통과했어요.';
   } else {
     setImage(j.image ? fileUrl(j, j.image) : '', j.name + ' 참고 이미지');
     $('stage-caption').textContent = j.image ? '참고 이미지 · 아직 제작 중이에요.' : '새 친구의 모습을 상상하고 있어요.';
@@ -171,7 +175,7 @@ document.querySelectorAll('[data-example]').forEach(button => button.addEventLis
 document.querySelectorAll('[data-state]').forEach(button => button.addEventListener('click', () => selectState(button.dataset.state)));
 $('check').addEventListener('click', check);
 $('refresh-jobs').addEventListener('click', () => loadJobs().catch(e => toast(e.message)));
-for (const [id, action] of [['cancel','cancel'],['register','register'],['apply-sound','sound']]) {
+for (const [id, action] of [['cancel','cancel'],['resume','resume'],['register','register'],['apply-sound','sound']]) {
   $(id).addEventListener('click', async () => {
     if (!job) return;
     $(id).disabled = true;

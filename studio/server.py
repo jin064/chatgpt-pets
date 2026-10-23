@@ -134,6 +134,8 @@ class Handler(BaseHTTPRequestHandler):
             job = manager.get(parts[2])
             if parts[3] == 'cancel':
                 manager.cancel(job['id'])
+            elif parts[3] == 'resume':
+                manager.resume(job['id'])
             elif parts[3] == 'register':
                 manager.register(job['id'])
             elif parts[3] == 'sound':
